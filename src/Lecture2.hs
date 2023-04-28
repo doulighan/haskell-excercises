@@ -16,6 +16,7 @@ Unlike exercises to Lecture 1, this module also contains more
 challenging exercises. You don't need to solve them to finish the
 course but you can if you like challenges :)
 -}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Lecture2
     ( -- * Normal
@@ -52,7 +53,258 @@ zero, you can stop calculating product and return 0 immediately.
 84
 -}
 lazyProduct :: [Int] -> Int
-lazyProduct = error "TODO"
+lazyProduct list = go 1 list
+  where
+    go :: Int -> [Int] -> Int
+    go result l
+      | null l      = result
+      | head l == 0 = 0
+      | otherwise   = go (result * head l) (tail l)
+
+
+
+-- PATTERNS (shape the input) --
+
+isZero :: Int -> Bool
+isZero 0 = True
+isZero n = False
+_        = False
+
+evalm :: Char -> Int -> Int -> Int
+evalm op x y = case op of
+  '+' -> x + y
+  '-' -> x - y
+  '*' -> x * y
+  '/' -> div x y
+  _ -> 0
+
+-- List Patterns --
+
+isEmpty :: [Int] -> Bool
+isEmpty [] = True
+isEmpty _  = False
+
+sumOfTwoInThree :: [Int] -> Int
+sumOfTwoInThree [x, _, y] = x + y
+sumOfTwoInThree _         = 0
+
+oneOrTwoZeros :: [Int] -> Bool
+oneOrTwoZeros l = case l of
+  [0]    ->  True
+  [0, 0] -> True
+  _      -> False
+
+onlyTwo :: [Int] -> Bool
+onlyTwo [_, _] = True
+onlyTwo _      = False
+
+
+{-  Structural List Patterns 
+[]
+x : xs
+-}
+
+headOrDef :: Int -> [Int] -> Int
+headOrDef def []      = def -- if empty, return default
+headOrDef _   (x : _) = x   -- if any other pattern, peek first element
+
+dropHead :: [Int] -> [Int]
+dropHead []       = []
+dropHead (_ : xs) = xs   -- peek everything but first element. XS is just a var name
+
+secondIsZero :: [Int] -> Bool
+secondIsZero (_ : 0 : _) = True
+secondIsZero _           = False
+
+atLeastTwo :: [Int] -> Bool
+atLeastTwo (_ : _ : _) = True -- Must have first, second. Third can be value or null.
+atLeastTwo _       = False
+
+mySumFldr :: [Int] -> Int
+mySumFldr xs = foldr (+) 0 xs  -- adds num to each el of list via func (+). Back to front. Works on empty lists. Basically reduce with specific pattern.
+
+mySum :: [Int] -> Int
+mySum [] = 0
+mySum (x : xs) = x + mySum xs  -- simple recursion with base case. slow!
+
+count :: Int -> [Int] -> Int
+count n = go 0
+  where
+    go :: Int -> [Int] -> Int
+    go acc [] = acc
+    go acc (x : xs)
+      | x == n    = go (acc + 1) xs
+      | otherwise = go acc       xs
+
+
+-- Totality --
+-- returns output on every possible input (accoridng to type) --
+
+
+{- Data / Types 
+
+TUPLES  (True, "x", 1) 
+
+only works on pairs:
+fst (_:_) -> first
+snd (_:_) -> second
+-}
+
+splitAtPos3 :: [Int] -> ([Int], [Int])
+splitAtPos3 l = ( take 3 l, drop 3 l)
+
+showTriple :: (Bool, Int, String) -> String
+showTriple (b, n, s) =
+  if b
+  then "Its " ++ show n
+  else "Its " ++ s
+
+
+
+-- Algebraic Data Types (ADT) --
+-- product (x) = A and B and C
+-- sum (+)     = A or  B or  C
+
+data User = MkUser String Int Bool
+  deriving (Show) -- special func to print type 
+
+getUserName :: User -> String
+getUserName (MkUser name _ _) = name
+
+getUserAge :: User -> Int
+getUserAge (MkUser _ age _) = age
+
+setUserName :: String -> User -> User
+setUserName name (MkUser _ age isTired) = MkUser name age isTired
+
+
+-- Records --
+-- Getters are created for you. They are top-level functions, make sure to disambiguate name --
+
+data UserTwo = MkUserTwo
+  { userName :: String
+  , userAge  :: Int
+  , isTired  :: Bool
+  }
+
+-- john = MkUserTwo { userName = "John", userAge = 25, isTired = True }
+-- userName john > "John"
+-- ivan = john { userName = "Ivan" }
+
+
+-- SUM TYPE (kinda like Enums?) --
+
+data Color 
+  = Red
+  | Green
+  | Blue
+
+showColor :: Color -> String
+showColor color = case color of
+    Red -> "red"
+    Green -> "green"
+    Blue -> "blue"
+
+-- showColor Blue  // "blue"
+-- map showColor [Blue, Green] // ["blue", "green"]
+
+data Result
+  = Error String
+  | Ok Int
+
+showResult :: Result -> String
+showResult (Error msg) = "Error: " ++ msg
+showResult (Ok result) = "Ok: " ++ show result
+
+divide :: Int -> Int -> Result
+divide _ 0 = Error "Division by Zero!"
+divide x y = Ok (div x y)
+
+-- showResult (divide 15 0) // "Error: Division by zero!"
+-- showResult (divide 15 3) // "Ok: 5"
+
+data Answer 
+  = NoResult
+  | Result Int
+
+data Property
+  = Padding Int
+  | Clickable Bool Int
+  | Description String
+
+-- Recursive Data Types --
+
+data IntList
+  = Empty
+  | Cons Int IntList
+
+myLength :: IntList -> Int
+myLength Empty = 0
+myLength (Cons _ xs) = 1 + myLength xs
+
+nzeros :: Int -> IntList
+nzeros 0 = Empty
+nzeros n = Cons 0 (nzeros (n - 1))
+
+-- Types (new name for existing types), compiler will not ensure type --
+
+type MyTriples = [(Int, Bool, String)]
+type IntPredicate = Int -> Bool
+
+type Attack = Int
+type Defense = Int
+type Health = Int
+
+calcHealth :: Attack -> Defense -> Health -> Health
+calcHealth a d h = h - (a + d)
+
+-- New Types: compiler will ensure specific type --
+
+newtype Atk = MkAtk Int
+newtype Def = MkDef Int
+newtype Hth = MkHth Int
+
+calcHealth2 :: Atk -> Def -> Hth -> Hth
+calcHealth2 (MkAtk a) (MkDef d) (MkHth h) = MkHth (h - (a + d))
+
+
+-- POLYMORPHISM --
+
+dup :: a -> (a, a)
+dup x = (x, x)
+
+data Chest a = MkChest
+  { chestGold     :: Int
+  , chestTreasure :: a
+  }
+
+-- MkChest 100 True
+
+-- type BronzeChest = Chest Armor
+-- type SilverChes = Chest (Sword, [Gemstone])
+
+
+fromMaybeInt :: Maybe Int -> Int
+fromMaybeInt Nothing  = 0
+fromMaybeInt (Just n) = n
+
+
+-- Composition
+
+-- map (even . length . words) ["Hi", "hello you", "hello me", "nope"]
+
+takeEven5 :: [[a]] -> [[a]]
+takeEven5 list = take 5 (filter (\l -> even (length l)) list)
+
+takeEven52 :: [[a]] -> [[a]]
+takeEven52 list = take 5 (filter (even . length) list)
+
+takeEven53 :: [[a]] -> [[a]]
+takeEven53 list = (take 5 . filter (even . length)) list
+
+takeEven54 :: [[a]] -> [[a]]
+takeEven54 = take 5 . filter (even . length)
+
 
 {- | Implement a function that duplicates every element in the list.
 
@@ -62,7 +314,7 @@ lazyProduct = error "TODO"
 "ccaabb"
 -}
 duplicate :: [a] -> [a]
-duplicate = error "TODO"
+duplicate (x : xs) = x : x : xs
 
 {- | Implement function that takes index and a list and removes the
 element at the given position. Additionally, this function should also
